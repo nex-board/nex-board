@@ -19,16 +19,27 @@
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
+						wayland
+						wayland-protocols
             toolchain
             rust-analyzer
-            wayland
-            wayland-protocols
             libxkbcommon
             alsa-lib
             udev
             glfw-wayland
             vulkan-loader
             mesa
+						pkg-config
+						libxkbcommon
+          ];
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+            pkgs.alsa-lib
+            pkgs.udev
+            pkgs.wayland
+            pkgs.wayland-protocols
+						pkgs.libxkbcommon
+						pkgs.mesa
+						pkgs.vulkan-loader
           ];
         };
         
