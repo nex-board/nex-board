@@ -9,7 +9,8 @@ pub struct TextSource {
 }
 
 pub fn load_csv(file: &str) -> Result<Vec<TextSource>, Box<dyn Error>> {
-    let csv_path = String::from("../assets/presets/") + file;
+    let mut csv_path = std::env::home_dir().unwrap();
+    csv_path.push("ebb/presets/".to_string() + file);
     let file_content = std::fs::read_to_string(csv_path)?;
     println!("{}", file_content);
 

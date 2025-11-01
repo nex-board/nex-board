@@ -58,7 +58,7 @@
           ];
           runScript = "electrical-bboard"; 
         };
-        
+
         packages.electrical-bboard-unwrapped = (pkgs.makeRustPlatform {
           cargo = toolchain;
           rustc = toolchain;
