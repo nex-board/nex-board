@@ -31,6 +31,7 @@
             mesa
 						pkg-config
 						libxkbcommon
+            lldb
           ];
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
             pkgs.alsa-lib

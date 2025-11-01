@@ -5,33 +5,28 @@ use bevy::{
     text::{TextLayout, TextLayoutInfo},
 };
 
-struct TextSource {
-    contents: String,
-    duration: f32,
-}
+mod text;
+mod loader;
+
+use loader::TextSource;
 
 fn main() {
+    let preset_snow_freaks: Vec<TextSource> =
+	match loader::load_csv("snow_freaks.csv") {
+	    Ok(n) => { n }
+	    Err(e) => {
+		println!("Err: {}", e);
+		vec![
+		    TextSource {
+			content: "This is a Demo Text".to_string(),
+			duration: 5.0,
+		    }
+		]
+	    }};
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(TextQueue {
-            texts: vec![
-                TextSource {
-                    contents: "大阪公立大学工業高等専門学校".to_string(),
-                    duration: 5.0,
-                },
-                TextSource {
-                    contents: "学友会執行委員会 情報通信課".to_string(),
-                    duration: 8.0,
-                },
-                TextSource {
-                    contents: "学友会執行委員会 総務課展示電気係".to_string(),
-                    duration: 5.0,
-                },
-                TextSource {
-                    contents: "学友会執行委員会 音響課".to_string(),
-                    duration: 2.0,
-                },
-            ],
+            texts: preset_snow_freaks,
             current_index: 0,
         })
         .init_resource::<ScrollingState>()
@@ -82,7 +77,7 @@ fn setup(
     // 最初のテキストを表示（スクロールは無効状態で開始）
     spawn_text(
         &mut cmds,
-        &text_queue.texts[0].contents,
+        &text_queue.texts[0].content,
         &text_queue.texts[0].duration,
         text_font,
         &mut *scrolling_speed,
@@ -96,7 +91,7 @@ fn spawn_text(
     text_font: TextFont,
     scrolling_speed: &mut ScrollingSpeed,
 ) {
-    let text_offset = calc_text_offset(text);
+    let text_offset = text::calc_text_offset(text);
     println!("Offset: {}", text_offset);
     cmds.spawn((
         Text2d::new(text),
@@ -108,7 +103,7 @@ fn spawn_text(
         TextScroll,
     ))
     .insert(NoFrustumCulling);
-    scrolling_speed.speed = calc_speed(text_offset * 2.0, duration);
+    scrolling_speed.speed = text::calc_speed(text_offset * 2.0, duration);
 }
 
 fn text_scroll(
@@ -167,7 +162,7 @@ fn handle_mouse_click(
             };
             spawn_text(
                 &mut cmds,
-                &text_queue.texts[text_queue.current_index].contents.clone(),
+                &text_queue.texts[text_queue.current_index].content.clone(),
                 &text_queue.texts[text_queue.current_index].duration,
                 text_font,
                 &mut *scrolling_speed,
@@ -175,7 +170,7 @@ fn handle_mouse_click(
 
             println!(
                 "次のテキストにスキップ: {}",
-                text_queue.texts[text_queue.current_index].contents
+                text_queue.texts[text_queue.current_index].content
             );
         }
     }
@@ -214,7 +209,7 @@ fn check_text_completion(
             // 次のテキストを表示
             spawn_text(
                 &mut cmds,
-                &text_queue.texts[text_queue.current_index].contents.clone(),
+                &text_queue.texts[text_queue.current_index].content.clone(),
                 &text_queue.texts[text_queue.current_index].duration,
                 text_font,
                 &mut *scrolling_speed,
@@ -222,30 +217,10 @@ fn check_text_completion(
 
             println!(
                 "Next: {} ",
-                text_queue.texts[text_queue.current_index].contents
+                text_queue.texts[text_queue.current_index].content
             );
             break; // 一度に一つのテキストのみ処理
         }
     }
 }
 
-fn count_ascii(s: &str) -> (usize, usize) {
-    s.chars().fold((0, 0), |mut acc, c| {
-        if c.is_ascii() {
-            acc.0 += 1;
-        } else {
-            acc.1 += 1;
-        }
-        acc
-    })
-}
-
-fn calc_text_offset(s: &str) -> f32 {
-    let (ascii, non_ascii) = count_ascii(s);
-    println!("{}", non_ascii * 2 + ascii);
-    return ((non_ascii * 2 + ascii) as f32 * 580.0 / 2.0) + (1980.0 / 2.0);
-}
-
-fn calc_speed(w: f32, d: &f32) -> f32 {
-    return (w + 1080.0) / d;
-}

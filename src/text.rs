@@ -1,0 +1,20 @@
+fn count_ascii(s: &str) -> (usize, usize) {
+    s.chars().fold((0, 0), |mut acc, c| {
+        if c.is_ascii() {
+            acc.0 += 1;
+        } else {
+            acc.1 += 1;
+        }
+        acc
+    })
+}
+
+pub fn calc_text_offset(s: &str) -> f32 {
+    let (ascii, non_ascii) = count_ascii(s);
+    println!("{}", non_ascii * 2 + ascii);
+    return ((non_ascii * 2 + ascii) as f32 * 580.0 / 2.0) + (1980.0 / 2.0);
+}
+
+pub fn calc_speed(w: f32, d: &f32) -> f32 {
+    return (w + 1080.0) / d;
+}
