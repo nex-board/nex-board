@@ -215,7 +215,7 @@ fn check_text_completion(
 
     for (entity, transform, info) in query.iter() {
         let text_width = info.size.x;
-        let text_left_edge = transform.translation.x + text_width / 2.0 + 1300.0;
+        let text_left_edge = transform.translation.x + (text_width + config.window_width) / 2.0 + 5.0;
 
         // テキストが完全に画面左端を通り過ぎたかチェック（テキスト全体が画面外に出るまで待つ）
         if text_left_edge < 0.0 {
