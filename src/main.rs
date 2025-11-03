@@ -8,21 +8,11 @@ use bevy::{
 mod text;
 mod loader;
 
-use loader::TextSource;
+use loader::{TextSource, Config};
 
 fn main() {
-    let preset_snow_freaks: Vec<TextSource> =
-	match loader::load_csv("snow_freaks.csv") {
-	    Ok(n) => { n }
-	    Err(e) => {
-		println!("Err: {}", e);
-		vec![
-		    TextSource {
-			content: "This is a Demo Text".to_string(),
-			duration: 5.0,
-		    }
-		]
-	    }};
+    let preset_snow_freaks: Vec<TextSource> = loader::unwrap_csv("snow_freaks.csv");
+    let conf: Config = loader::unwrap_conf();
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(ClearColor(Color::Srgba(SLATE_900)))
@@ -30,11 +20,7 @@ fn main() {
             texts: preset_snow_freaks,
             current_index: 0,
         })
-        .insert_resource(Config {
-	    text_size: 1080.0,
-	    window_width: 1920.0,
-	    camera_offset: 0.0,
-	})
+        .insert_resource(conf)
         .init_resource::<ScrollingState>()
         .init_resource::<ScrollingSpeed>()
         .add_systems(Startup, setup)
@@ -54,13 +40,6 @@ struct ScrollingActive;
 struct TextQueue {
     texts: Vec<TextSource>,
     current_index: usize,
-}
-
-#[derive(Resource)]
-struct Config {
-    text_size: f32,
-    window_width: f32,
-    camera_offset: f32,
 }
 
 #[derive(Resource, Default)]
@@ -86,6 +65,7 @@ fn setup(
         font_size: config.text_size,
         ..default()
     };
+    println!("Window_Width: {} / Text_Size: {}", config.window_width, config.text_size);
     cmds.spawn((
 	Camera2d,
 	Transform::from_translation(Vec3::new(config.camera_offset, 0.0, 0.0))
