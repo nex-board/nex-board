@@ -1,14 +1,15 @@
 use bevy::{
-    camera::visibility::NoFrustumCulling,
-    color::palettes::{tailwind::YELLOW_300, tailwind::SLATE_900},
-    prelude::*,
-    text::{TextLayout, TextLayoutInfo},
+    color::palettes::tailwind::SLATE_900, ecs::query, prelude::*, text::{TextLayout, TextLayoutInfo}
 };
 
-mod text;
+mod bingo;
 mod loader;
+mod server;
+mod text;
+mod text_spawner;
 
-use loader::{TextSource, Config};
+use loader::{Config, TextSource};
+use bingo::BingoState;
 
 fn main() {
     let preset_snow_freaks: Vec<TextSource> = loader::unwrap_csv("snow_freaks.csv");
@@ -23,93 +24,70 @@ fn main() {
         .insert_resource(conf)
         .init_resource::<ScrollingState>()
         .init_resource::<ScrollingSpeed>()
+        .init_resource::<Fonts>()
+        .init_resource::<BingoState>()
         .add_systems(Startup, setup)
-        .add_systems(Update, handle_mouse_click)
         .add_systems(Update, text_scroll)
-        .add_systems(Update, check_text_completion)
+//        .add_systems(Update, check_text_completion)
+        .add_systems(Update, handle_keyboard_action)
         .run();
 }
 
+#[derive(Resource, Default)]
+pub struct Fonts {
+    text_font: TextFont
+}
+    
 #[derive(Component)]
 struct TextScroll;
 
-#[derive(Component)]
-struct ScrollingActive;
-
 #[derive(Resource)]
-struct TextQueue {
+pub struct TextQueue {
     texts: Vec<TextSource>,
     current_index: usize,
 }
 
 #[derive(Resource, Default)]
-struct ScrollingState {
+pub struct ScrollingState {
     is_active: bool,
 }
 
 #[derive(Resource, Default)]
-struct ScrollingSpeed {
+pub struct ScrollingSpeed {
     speed: f32,
 }
 
+#[derive(Component)]
+pub struct Showing;
+
 fn setup(
     mut cmds: Commands,
-    asset_server: Res<AssetServer>,
-    text_queue: Res<TextQueue>,
     config: Res<Config>,
-    mut scrolling_speed: ResMut<ScrollingSpeed>,
+    asset_server: Res<AssetServer>,
+    mut fonts: ResMut<Fonts>,
+    mut bingo: ResMut<BingoState>
 ) {
     let font = asset_server.load("fonts/ipag.ttf");
     let text_font = TextFont {
-        font: font.clone(),
-        font_size: config.text_size,
+        font: font,
+      font_size: config.text_size,
         ..default()
     };
-    println!("Window_Width: {} / Text_Size: {}", config.window_width, config.text_size);
+    let bingo_state = BingoState::new();
+    fonts.text_font = text_font;
+    bingo.numbers = bingo_state.numbers;
+    bingo.index = bingo_state.index;
     cmds.spawn((
-	Camera2d,
-	Transform::from_translation(Vec3::new(config.camera_offset, 0.0, 0.0))
+        Camera2d,
+        Transform::from_translation(Vec3::new(config.camera_offset, 0.0, 0.0)),
     ));
-
-    // 最初のテキストを表示（スクロールは無効状態で開始）
-    spawn_text(
-        &mut cmds,
-        &text_queue.texts[0].content,
-        &text_queue.texts[0].duration,
-        text_font,
-	&config,
-        &mut *scrolling_speed,
-    );
-}
-
-fn spawn_text(
-    cmds: &mut Commands,
-    text: &str,
-    duration: &f32,
-    text_font: TextFont,
-    config: &Config,
-    scrolling_speed: &mut ScrollingSpeed,
-) {
-    let text_offset = text::calc_text_offset(text, config.text_size, config.window_width);
-    println!("Offset: {}", text_offset);
-    cmds.spawn((
-        Text2d::new(text),
-        text_font,
-        TextColor(Color::Srgba(YELLOW_300)),
-        TextBackgroundColor(Color::Srgba(SLATE_900)),
-        Transform::from_translation(Vec3::new(text_offset, 0.0, 0.0)),
-        TextLayout::default(),
-        TextScroll,
-    ))
-    .insert(NoFrustumCulling);
-    scrolling_speed.speed = text::calc_speed(text_offset * 2.0, duration, config.window_width);
 }
 
 fn text_scroll(
     time: Res<Time>,
     scrolling_state: Res<ScrollingState>,
     scrolling_speed: Res<ScrollingSpeed>,
-    mut query: Query<&mut Transform, (With<TextScroll>, With<ScrollingActive>)>,
+    mut query: Query<&mut Transform, With<TextScroll>>,
 ) {
     if !scrolling_state.is_active {
         return;
@@ -119,105 +97,65 @@ fn text_scroll(
         transform.translation.x -= scrolling_speed.speed * time.delta_secs()
     }
 }
-
-fn handle_mouse_click(
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
+     
+fn handle_keyboard_action(
+    keys: Res<ButtonInput<KeyCode>>,
     mut scrolling_state: ResMut<ScrollingState>,
     mut text_queue: ResMut<TextQueue>,
     mut cmds: Commands,
-    asset_server: Res<AssetServer>,
+    mut bingo: ResMut<BingoState>,
     config: Res<Config>,
-    waiting_text_query: Query<Entity, (With<TextScroll>, Without<ScrollingActive>)>,
-    active_text_query: Query<Entity, (With<TextScroll>, With<ScrollingActive>)>,
+    fonts: Res<Fonts>,
+    text_query: Query<Entity, With<Showing>>,
     mut scrolling_speed: ResMut<ScrollingSpeed>,
 ) {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        if !scrolling_state.is_active {
-            // 待機中のテキストがある場合、スクロール開始
-            scrolling_state.is_active = true;
-
-            for entity in waiting_text_query.iter() {
-                cmds.entity(entity).insert(ScrollingActive);
-            }
-
-            println!("スクロール開始！");
-        } else {
-            // スクロール中の場合、現在のテキストを削除して次のテキストを表示
-            for entity in active_text_query.iter() {
+    if keys.just_pressed(KeyCode::Enter) {
+            for entity in text_query.iter() {
                 cmds.entity(entity).despawn();
             }
 
-            // 次のテキストインデックスに進む
-            text_queue.current_index = (text_queue.current_index + 1) % text_queue.texts.len();
+        text_spawner::spawn_text(
+            &mut cmds,
+            &text_queue.texts[text_queue.current_index].content.clone(),
+            &text_queue.texts[text_queue.current_index].duration,
+            fonts.text_font.clone(),
+            &config,
+            &mut *scrolling_speed,
+        );
 
-            // スクロールを停止
-            scrolling_state.is_active = false;
+        text_queue.current_index += 1;
 
-            // 次のテキストを表示
-            let font = asset_server.load("fonts/ipag.ttf");
-            let text_font = TextFont {
-                font: font.clone(),
-                font_size: config.text_size,
-                ..default()
-            };
-            spawn_text(
-                &mut cmds,
-                &text_queue.texts[text_queue.current_index].content.clone(),
-                &text_queue.texts[text_queue.current_index].duration,
-                text_font,
-		&config,
-                &mut *scrolling_speed,
-            );
-
-            println!(
-                "次のテキストにスキップ: {}",
-                text_queue.texts[text_queue.current_index].content
-            );
-        }
-    }
+	scrolling_state.is_active = true;
+    };
+    if keys.just_pressed(KeyCode::KeyB) {
+	for entity in text_query.iter() {
+	    cmds.entity(entity).despawn();
+	}
+	text_spawner::spawn_static_text(&mut cmds, &bingo.next().unwrap_or(0).to_string(), fonts.text_font.clone());
+    }	
 }
 
 fn check_text_completion(
     mut cmds: Commands,
-    asset_server: Res<AssetServer>,
     config: Res<Config>,
-    mut text_queue: ResMut<TextQueue>,
+    text_queue: ResMut<TextQueue>,
     mut scrolling_state: ResMut<ScrollingState>,
-    query: Query<(Entity, &Transform, &TextLayoutInfo), (With<TextScroll>, With<ScrollingActive>)>,
-    mut scrolling_speed: ResMut<ScrollingSpeed>,
+    query: Query<(Entity, &Transform, &TextLayoutInfo), With<TextScroll>>,
 ) {
-    let font = asset_server.load("fonts/ipag.ttf");
-    let text_font = TextFont {
-        font: font.clone(),
-        font_size: config.text_size,
-        ..default()
-    };
 
     for (entity, transform, info) in query.iter() {
         let text_width = info.size.x;
-        let text_left_edge = transform.translation.x + (text_width + config.window_width) / 2.0 + 5.0;
+        let text_left_edge =
+            transform.translation.x + (text_width + config.window_width) / 2.0 + 5.0;
 
         // テキストが完全に画面左端を通り過ぎたかチェック（テキスト全体が画面外に出るまで待つ）
         if text_left_edge < 0.0 {
             // 現在のテキストエンティティを削除
             cmds.entity(entity).despawn();
 
-            // 次のテキストインデックスに進む
-            text_queue.current_index = (text_queue.current_index + 1) % text_queue.texts.len();
-
             // スクロールを停止
             scrolling_state.is_active = false;
-
-            // 次のテキストを表示
-            spawn_text(
-                &mut cmds,
-                &text_queue.texts[text_queue.current_index].content.clone(),
-                &text_queue.texts[text_queue.current_index].duration,
-                text_font,
-		&config,
-                &mut *scrolling_speed,
-            );
-
+	    
             println!(
                 "Next: {} ",
                 text_queue.texts[text_queue.current_index].content
@@ -226,4 +164,3 @@ fn check_text_completion(
         }
     }
 }
-
