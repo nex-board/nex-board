@@ -1,12 +1,14 @@
 use bevy::{
-    color::palettes::tailwind::SLATE_900, ecs::query, prelude::*, text::{TextLayout, TextLayoutInfo}
+    color::palettes::tailwind::SLATE_900,  prelude::*, text::TextLayoutInfo
 };
+use bevy_tokio_tasks::TokioTasksPlugin;
 
 mod bingo;
 mod loader;
 mod server;
 mod text;
 mod text_spawner;
+mod countdown;
 
 use loader::{Config, TextSource};
 use bingo::BingoState;
@@ -14,8 +16,10 @@ use bingo::BingoState;
 fn main() {
     let preset_snow_freaks: Vec<TextSource> = loader::unwrap_csv("snow_freaks.csv");
     let conf: Config = loader::unwrap_conf();
-    App::new()
-        .add_plugins(DefaultPlugins)
+    
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins)
+        .add_plugins(TokioTasksPlugin::default())
         .insert_resource(ClearColor(Color::Srgba(SLATE_900)))
         .insert_resource(TextQueue {
             texts: preset_snow_freaks,
@@ -28,9 +32,13 @@ fn main() {
         .init_resource::<BingoState>()
         .add_systems(Startup, setup)
         .add_systems(Update, text_scroll)
-//        .add_systems(Update, check_text_completion)
-        .add_systems(Update, handle_keyboard_action)
-        .run();
+        .add_systems(Update, check_text_completion)
+        .add_systems(Update, handle_keyboard_action);
+    
+    // WebSocketサーバーをセットアップ
+    server::setup_websocket_server(&mut app);
+    
+    app.run();
 }
 
 #[derive(Resource, Default)]

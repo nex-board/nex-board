@@ -11,5 +11,6 @@ bevy_common_assets = { version = "0.14.0", features = ["csv"] }
 csv = "1.4.0"
 rand = "0.9.2"
 serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0"
 tokio = "1.48.0"
 toml = "0.9.8"
