@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use std::error::Error;
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, Debug, Resource)]
 pub struct TextSource {
@@ -21,11 +21,12 @@ pub fn load_csv(file: &str) -> Result<Vec<TextSource>, Box<dyn Error>> {
     let file_content = std::fs::read_to_string(csv_path)?;
     println!("{}", file_content);
 
-    let mut rdr = csv::ReaderBuilder::new()
+    let rdr = csv::ReaderBuilder::new()
         .has_headers(true)
         .from_reader(file_content.as_bytes());
 
-    let result: Vec<TextSource> = rdr.into_deserialize()
+    let result: Vec<TextSource> = rdr
+        .into_deserialize()
         .collect::<Result<Vec<TextSource>, csv::Error>>()?;
     Ok(result)
 }
@@ -41,28 +42,27 @@ pub fn load_config() -> Result<Config, Box<dyn Error>> {
 
 pub fn unwrap_csv(f: &str) -> Vec<TextSource> {
     match load_csv(f) {
-	Ok(n) => { return n }
-	Err(e) => {
-	    println!("Err: Can't Find {}", f);
-	    return vec![
-		TextSource {
-		    content: "This is a Demo Text".to_string(),
-		    duration: 5.0,
-		}
-	    ]
-	}};
+        Ok(n) => return n,
+        Err(_e) => {
+            println!("Err: Can't Load Preset File: {}", f);
+            return vec![TextSource {
+                content: "This is a Demo Text".to_string(),
+                duration: 5.0,
+            }];
+        }
+    };
 }
 
 pub fn unwrap_conf() -> Config {
     match load_config() {
-	Ok(n) => { return n }
-	Err(e) => {
-	    println!("Err: {}", e);
-	    return Config {
-		text_size: 1080.0,
-		window_width: 1920.0,
-		camera_offset: 0.0,
-	    }
-	}
+        Ok(n) => return n,
+        Err(_e) => {
+            println!("Err: Can't Load Config File!");
+            return Config {
+                text_size: 1080.0,
+                window_width: 1920.0,
+                camera_offset: 0.0,
+            };
+        }
     };
 }
