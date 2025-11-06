@@ -8,7 +8,7 @@ mod loader;
 mod server;
 mod text;
 mod text_spawner;
-mod countdown;
+// mod countdown;
 
 use loader::{Config, TextSource};
 use bingo::BingoState;
