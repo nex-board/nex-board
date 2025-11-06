@@ -7,8 +7,9 @@ use axum::{
 };
 use bevy_tokio_tasks::TokioTasksRuntime;
 use bevy::prelude::*;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, broadcast};
 use serde::{Deserialize, Serialize};
+use futures_util::{SinkExt, StreamExt};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(tag = "mode", rename_all = "snake_case")]
@@ -69,7 +70,7 @@ pub struct CountdownResponse {
 #[derive(Resource)]
 pub struct WebSocketChannel {
     pub command_receiver: mpsc::Receiver<WsCommand>,
-    pub response_sender: mpsc::Sender<WsResponse>,
+    pub response_sender: broadcast::Sender<WsResponse>,
 }
 
 #[derive(Resource)]
@@ -77,9 +78,14 @@ pub struct CommandSender {
     pub sender: mpsc::Sender<WsCommand>,
 }
 
+#[derive(Resource)]
+pub struct ResponseBroadcaster {
+    pub sender: broadcast::Sender<WsResponse>,
+}
+
 pub fn setup_websocket_server(app: &mut App) {
     let (command_tx, command_rx) = mpsc::channel::<WsCommand>(100);
-    let (response_tx, _response_rx) = mpsc::channel::<WsResponse>(100);
+    let (response_tx, _response_rx) = broadcast::channel::<WsResponse>(100);
     
     app.insert_resource(CommandSender {
         sender: command_tx,
@@ -87,7 +93,11 @@ pub fn setup_websocket_server(app: &mut App) {
     
     app.insert_resource(WebSocketChannel {
         command_receiver: command_rx,
-        response_sender: response_tx,
+        response_sender: response_tx.clone(),
+    });
+    
+    app.insert_resource(ResponseBroadcaster {
+        sender: response_tx,
     });
     
     app.add_systems(Startup, start_axum_server);
@@ -97,13 +107,16 @@ pub fn setup_websocket_server(app: &mut App) {
 fn start_axum_server(
     runtime: Res<TokioTasksRuntime>,
     command_sender: Res<CommandSender>,
+    response_broadcaster: Res<ResponseBroadcaster>,
 ) {
     let command_tx = command_sender.sender.clone();
+    let response_tx = response_broadcaster.sender.clone();
     
     runtime.spawn_background_task(move |_ctx| async move {
         let app = Router::new()
             .route("/ws", get(ws_handler))
-            .layer(Extension(command_tx));
+            .layer(Extension(command_tx))
+            .layer(Extension(response_tx));
             
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
             .await
@@ -120,40 +133,69 @@ fn start_axum_server(
 async fn ws_handler(
     ws: WebSocketUpgrade,
     Extension(command_tx): Extension<mpsc::Sender<WsCommand>>,
+    Extension(response_tx): Extension<broadcast::Sender<WsResponse>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_websocket(socket, command_tx))
+    ws.on_upgrade(move |socket| handle_websocket(socket, command_tx, response_tx))
 }
 
 async fn handle_websocket(
-    mut socket: WebSocket,
+    socket: WebSocket,
     command_tx: mpsc::Sender<WsCommand>,
+    response_tx: broadcast::Sender<WsResponse>,
 ) {
-    // クライアントからのメッセージを受信
-    while let Some(result) = socket.recv().await {
-        match result {
-            Ok(Message::Text(text)) => {
-                match serde_json::from_str::<WsCommand>(&text) {
-                    Ok(command) => {
-                        if command_tx.send(command).await.is_err() {
-                            eprintln!("Failed to send command to Bevy");
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Failed to parse WebSocket message: {}", e);
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+    let mut response_rx = response_tx.subscribe();
+    
+    // レスポンス送信タスク
+    let response_task = tokio::spawn(async move {
+        while let Ok(response) = response_rx.recv().await {
+            match serde_json::to_string(&response) {
+                Ok(json) => {
+                    if ws_sender.send(Message::Text(json.into())).await.is_err() {
+                        break;
                     }
                 }
-            }
-            Ok(Message::Close(_)) => {
-                println!("WebSocket connection closed");
-                break;
-            }
-            Ok(_) => {} // その他のメッセージタイプは無視
-            Err(e) => {
-                eprintln!("WebSocket error: {}", e);
-                break;
+                Err(e) => {
+                    eprintln!("Failed to serialize response: {}", e);
+                }
             }
         }
+    });
+    
+    // コマンド受信タスク
+    let command_task = tokio::spawn(async move {
+        while let Some(result) = ws_receiver.next().await {
+            match result {
+                Ok(Message::Text(text)) => {
+                    match serde_json::from_str::<WsCommand>(&text) {
+                        Ok(command) => {
+                            if command_tx.send(command).await.is_err() {
+                                eprintln!("Failed to send command to Bevy");
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to parse WebSocket message: {}", e);
+                        }
+                    }
+                }
+                Ok(Message::Close(_)) => {
+                    println!("WebSocket connection closed");
+                    break;
+                }
+                Ok(_) => {} // その他のメッセージタイプは無視
+                Err(e) => {
+                    eprintln!("WebSocket error: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+    
+    // どちらかのタスクが終了したら、もう一方もキャンセル
+    tokio::select! {
+        _ = response_task => {},
+        _ = command_task => {},
     }
 }
 
@@ -208,7 +250,7 @@ fn handle_websocket_commands(
                         next_text,
                     });
                     
-                    let _ = ws_channel.response_sender.try_send(response);
+                    let _ = ws_channel.response_sender.send(response);
                 }
             }
             WsCommand::Bingo { method } => {
@@ -231,7 +273,7 @@ fn handle_websocket_commands(
                                 no: bingo_state.index as u8,
                             });
                             
-                            let _ = ws_channel.response_sender.try_send(response);
+                            let _ = ws_channel.response_sender.send(response);
                         }
                     }
                 }
@@ -247,7 +289,7 @@ fn handle_websocket_commands(
                             status: "started".to_string(),
                         });
                         
-                        let _ = ws_channel.response_sender.try_send(response);
+                        let _ = ws_channel.response_sender.send(response);
                     }
                 }
             }
