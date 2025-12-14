@@ -52,7 +52,7 @@
         };
 
         packages.default = pkgs.buildFHSEnv {
-          name = "electrical-bboard-fhs";
+          name = "nex-board-fhs";
           targetPkgs = pkgs: [
             (self.packages.${system}.electrical-bboard-unwrapped)
             pkgs.wayland
@@ -63,17 +63,17 @@
             pkgs.vulkan-loader
             pkgs.mesa
           ];
-          runScript = "electrical-bboard";
+          runScript = "nex-board";
         };
 
-        packages.electrical-bboard-unwrapped =
+        packages.nex-board-unwrapped =
           (pkgs.makeRustPlatform {
             cargo = toolchain;
             rustc = toolchain;
             rustfmt = toolchain;
           }).buildRustPackage
             {
-              pname = "electrical-bboard";
+              pname = "nex-board";
               version = "0.1.0";
               src = ./.;
               rpath = true;
