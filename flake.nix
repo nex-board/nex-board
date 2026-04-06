@@ -33,7 +33,7 @@
             libxkbcommon
             alsa-lib
             udev
-            glfw-wayland
+            glfw
             vulkan-loader
             mesa
             pkg-config
@@ -54,12 +54,12 @@
         packages.default = pkgs.buildFHSEnv {
           name = "nex-board-fhs";
           targetPkgs = pkgs: [
-            (self.packages.${system}.electrical-bboard-unwrapped)
+            (self.packages.${system}.nex-board-unwrapped)
             pkgs.wayland
             pkgs.libxkbcommon
             pkgs.alsa-lib
             pkgs.udev
-            pkgs.glfw-wayland
+            pkgs.glfw
             pkgs.vulkan-loader
             pkgs.mesa
           ];
@@ -92,8 +92,8 @@
                 wayland-protocols
                 alsa-lib
                 udev
-                glfw-wayland
-                xorg.libxkbfile
+                glfw
+                libxkbfile
                 libxkbcommon
               ];
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
@@ -110,16 +110,14 @@
                     pkgs.alsa-lib
                     pkgs.udev
                     pkgs.libxkbcommon
-                    pkgs.glfw-wayland
-                    pkgs.xorg.libxkbfile
-                  ]
-                }"
-                patchelf --set-rpath $LD_LIBRARY_PATH $out/bin/electrical-bboard
+                    pkgs.glfw
+                    pkgs.libxkbfile
+                  ]};"
               '';
               postInstall = ''
-                											cp -r assets $out/bin/assets
-                					'';
-            };
+                	        										cp -r assets $out/bin/assets
+                					                    '';
+          };
       }
     );
 }
