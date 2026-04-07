@@ -11,3 +11,7 @@ This system is developed for Kosen Festival in Osaka Metropolitan University Col
 3. `nix run github:omuct-gakuyukai/electrical-bulletin-board` or run the binary.
 
 \* Sample config files are in `example/` directory.
+
+## Links
+[Deepwiki](https://deepwiki.com/nex-board/nex-board)  
+[Osaka Metropolitan University College of Technology Students' Association](https://omuct-gakuyukai.com)
