@@ -31,7 +31,6 @@
           libxkbcommon
           mesa
           vulkan-loader
-          pkg-config
         ];
       in
       {
@@ -41,6 +40,7 @@
             rust-analyzer
             glfw
             lldb
+            pkg-config
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
         };
 
@@ -49,6 +49,7 @@
           targetPkgs = pkgs: [
             (self.packages.${system}.nex-board-unwrapped)
             pkgs.glfw
+            pkgs.pkg-config
           ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
           runScript = "nex-board";
         };
