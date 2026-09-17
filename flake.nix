@@ -22,47 +22,32 @@
       let
         toolchain = fenix.packages.${system}.default.toolchain;
         pkgs = nixpkgs.legacyPackages.${system};
+        linux-deps = with pkgs; [
+          alsa-lib
+          udev
+          wayland
+          wayland-protocols
+          libxkbcommon
+          mesa
+          vulkan-loader
+        ];
       in
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            wayland
-            wayland-protocols
             toolchain
             rust-analyzer
-            libxkbcommon
-            alsa-lib
-            udev
             glfw
-            vulkan-loader
-            mesa
-            pkg-config
-            libxkbcommon
             lldb
-          ];
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-            pkgs.alsa-lib
-            pkgs.udev
-            pkgs.wayland
-            pkgs.wayland-protocols
-            pkgs.libxkbcommon
-            pkgs.mesa
-            pkgs.vulkan-loader
-          ];
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
         };
 
         packages.default = pkgs.buildFHSEnv {
           name = "nex-board-fhs";
           targetPkgs = pkgs: [
             (self.packages.${system}.nex-board-unwrapped)
-            pkgs.wayland
-            pkgs.libxkbcommon
-            pkgs.alsa-lib
-            pkgs.udev
             pkgs.glfw
-            pkgs.vulkan-loader
-            pkgs.mesa
-          ];
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
           runScript = "nex-board";
         };
 
@@ -74,35 +59,19 @@
           }).buildRustPackage
             {
               pname = "nex-board";
-              version = "0.1.0";
+              version = "0.2.0";
               src = ./.;
               rpath = true;
               cargoLock.lockFile = ./Cargo.lock;
-              nativeBuildInputs = with pkgs; [
+              nativeBuildInputs = [
                 toolchain
-                pkg-config
-                wayland
-                wayland-protocols
-                alsa-lib
-                udev
               ];
               propagatedBuildInputs = with pkgs; [
                 openssl
-                wayland
-                wayland-protocols
-                alsa-lib
-                udev
-                glfw
-                libxkbfile
-                libxkbcommon
-              ];
-              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-                pkgs.alsa-lib
-                pkgs.udev
-                pkgs.wayland
-                pkgs.wayland-protocols
-              ];
-              postFixup = ''
+              ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
+              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath ([
+              ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps);
+              postFixup = (if pkgs.stdenv.isLinux then ''
                 lib_path="${
                   pkgs.lib.makeLibraryPath [
                     pkgs.wayland
@@ -113,9 +82,9 @@
                     pkgs.glfw
                     pkgs.libxkbfile
                   ]};"
-              '';
+              '' else "");
               postInstall = ''
-                	        										cp -r assets $out/bin/assets
+	                                            cp -r assets $out/bin/assets
                 					                    '';
           };
       }
