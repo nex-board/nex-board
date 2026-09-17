@@ -1,3 +1,4 @@
+
 {
   description = "Electrical-Bulletin-Board";
 
@@ -30,6 +31,7 @@
           libxkbcommon
           mesa
           vulkan-loader
+          pkg-config
         ];
       in
       {
