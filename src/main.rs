@@ -2,14 +2,12 @@ use bevy::{
     color::palettes::tailwind::SLATE_900,  prelude::*, text::TextLayoutInfo
 };
 use bevy_tokio_tasks::TokioTasksPlugin;
-
 mod bingo;
 mod loader;
 mod server;
 mod text;
 mod text_spawner;
 mod countdown;
-
 use loader::{Config, TextSource, PresetManager};
 use bingo::BingoState;
 use countdown::CountdownTimer;
@@ -185,7 +183,11 @@ fn handle_keyboard_action(
         );
 	}
 
-        text_queue.current_index += 1;
+	if text_queue.texts.len() - 1 > text_queue.current_index {
+            text_queue.current_index += 1;
+	} else {
+            eprintln!("Index out of Range");
+        };
 
 	scrolling_state.is_active = true;
     };
