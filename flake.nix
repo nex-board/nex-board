@@ -1,4 +1,3 @@
-
 {
   description = "Electrical-Bulletin-Board";
 
@@ -68,12 +67,14 @@
               cargoLock.lockFile = ./Cargo.lock;
               nativeBuildInputs = [
                 toolchain
+                pkgs.libclang
               ];
               propagatedBuildInputs = with pkgs; [
                 openssl
                 pkg-config
               ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath ([
+                pkgs.libclang
               ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps);
               postFixup = (if pkgs.stdenv.isLinux then ''
                 lib_path="${
@@ -88,8 +89,8 @@
                   ]};"
               '' else "");
               postInstall = ''
-	                                            cp -r assets $out/bin/assets
-                					                    '';
+                          cp -r assets $out/bin/assets
+              '';
           };
       }
     );
