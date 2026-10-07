@@ -1,9 +1,5 @@
 use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade}, 
-    response::IntoResponse, 
-    routing::get, 
-    Extension, 
-    Router
+    Extension, Router, extract::ws::{Message, WebSocket, WebSocketUpgrade}, response::IntoResponse, routing::get
 };
 use bevy_tokio_tasks::TokioTasksRuntime;
 use bevy::prelude::*;
@@ -22,6 +18,8 @@ pub enum WsCommand {
     Countdown { method: CountdownMethod, seconds: Option<f32>, countdown_mode: Option<String> },
     #[serde(rename = "list_presets")]
     ListPresets,
+    #[serde(rename = "free_text")]
+    FreeText { method: FreeTextMethod, text: String, durarion: f32},
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -37,12 +35,19 @@ pub enum CountdownMethod {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum FreeTextMethod {
+    Show,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(untagged)]
 pub enum WsResponse {
     Bulletin(BulletinResponse),
     Bingo(BingoResponse),
     Countdown(CountdownResponse),
     PresetList(PresetListResponse),
+    FreeText(FreeTextResponse),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -66,6 +71,11 @@ pub struct CountdownResponse {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct PresetListResponse {
     pub presets: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FreeTextResponse {
+    pub text: String,
 }
 
 #[derive(Resource)]
@@ -341,6 +351,22 @@ fn handle_websocket_commands(
                     presets: preset_names,
                 });
                 let _ = ws_channel.response_sender.send(response);
+            }
+            WsCommand::FreeText {text, method, durarion } => {
+                match method {
+                    FreeTextMethod::Show => {
+                        for entity in text_query.iter() {
+                            commands.entity(entity).despawn();
+                        }
+                        if durarion == 0.0 {
+                            crate::text_spawner::spawn_static_text(&mut commands, &text, fonts.text_font.clone());
+                        } else {
+                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, fonts.text_font.clone(), &config, &mut scrolling_speed);
+                        }
+                        let response = WsResponse::FreeText(FreeTextResponse { text: text });
+                        let _ = ws_channel.response_sender.send(response);
+                    }
+                }
             }
         }
     }
