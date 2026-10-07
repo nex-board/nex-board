@@ -11,6 +11,8 @@ use tokio::sync::{mpsc, broadcast};
 use serde::{Deserialize, Serialize};
 use futures_util::{SinkExt, StreamExt};
 
+use crate::bingo::BingoState;
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(tag = "mode")]
 pub enum WsCommand {
@@ -28,6 +30,7 @@ pub enum WsCommand {
 #[serde(rename_all = "snake_case")]
 pub enum BingoMethod {
     Next,
+    Reset,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -297,6 +300,7 @@ fn handle_websocket_commands(
                             let _ = ws_channel.response_sender.send(response);
                         }
                     }
+                    BingoMethod::Reset => {}
                 }
             }
             WsCommand::Countdown { method, seconds, countdown_mode } => {
