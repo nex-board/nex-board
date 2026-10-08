@@ -68,13 +68,14 @@
               nativeBuildInputs = [
                 toolchain
                 pkgs.libclang
+                pkgs.pkg-config
               ];
               propagatedBuildInputs = with pkgs; [
                 openssl
-                pkg-config
               ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath ([
                 pkgs.libclang
+                pkgs.pkg-config
               ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps);
               postFixup = (if pkgs.stdenv.isLinux then ''
                 lib_path="${
