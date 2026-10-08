@@ -230,6 +230,8 @@ fn handle_websocket_commands(
                         println!("Preset '{}' not found, using current preset '{}'", preset, text_queue.current_preset);
                     }
                 }
+
+                countdown_timer.stop();
                 
                 // 現在のテキストを削除
                 for entity in text_query.iter() {
@@ -280,6 +282,7 @@ fn handle_websocket_commands(
             WsCommand::Bingo { method } => {
                 match method {
                     BingoMethod::Next => {
+                        countdown_timer.stop();
                         // 現在のテキストを削除
                         for entity in text_query.iter() {
                             commands.entity(entity).despawn();
