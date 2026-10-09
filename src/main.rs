@@ -24,6 +24,7 @@ fn main() {
         .unwrap_or_else(|| vec![TextSource {
             content: "No presets available".to_string(),
             duration: 5.0,
+            color: "#FDE047".to_string(),
         }]);
     
     let mut app = App::new();
@@ -171,12 +172,13 @@ fn handle_keyboard_action(
 	countdown_timer.stop();
 
 	if text_queue.texts[text_queue.current_index].duration == 0.0 {
-	    text_spawner::spawn_static_text(&mut cmds, &text_queue.texts[text_queue.current_index].content.clone(), fonts.text_font.clone());
+	    text_spawner::spawn_static_text(&mut cmds, &text_queue.texts[text_queue.current_index].content.clone(), &text_queue.texts[text_queue.current_index].color, fonts.text_font.clone());
 	} else {
 	    text_spawner::spawn_text(
 		&mut cmds,
 		&text_queue.texts[text_queue.current_index].content.clone(),
 		&text_queue.texts[text_queue.current_index].duration,
+                &text_queue.texts[text_queue.current_index].color,
 		fonts.text_font.clone(),
 		&config,
 		&mut *scrolling_speed,
@@ -199,7 +201,7 @@ fn handle_keyboard_action(
 	// カウントダウンを停止
 	countdown_timer.stop();
 	
-	text_spawner::spawn_static_text(&mut cmds, &bingo.next().unwrap_or(0).to_string(), fonts.text_font.clone());
+	text_spawner::spawn_static_text(&mut cmds, &bingo.next().unwrap_or(0).to_string(), &"FDE047".to_string(), fonts.text_font.clone());
     }
     if keys.just_pressed(KeyCode::KeyC) {
         for entity in text_query.iter() {

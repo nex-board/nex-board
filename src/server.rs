@@ -237,14 +237,16 @@ fn handle_websocket_commands(
                 if let Some(text_source) = text_queue.texts.get(index as usize) {
                     let text_content = text_source.content.clone();
                     let text_duration = text_source.duration;
+                    let text_color = text_source.color.clone();
 
 		    if text_duration == 0.0 {
-			crate::text_spawner::spawn_static_text(&mut commands, &text_content, fonts.text_font.clone());
+			crate::text_spawner::spawn_static_text(&mut commands, &text_content, &text_color,fonts.text_font.clone());
 		    } else {
                     crate::text_spawner::spawn_text(
                         &mut commands,
                         &text_content,
                         &text_duration,
+                        &text_color,
                         fonts.text_font.clone(),
                         &config,
                         &mut *scrolling_speed,
@@ -286,6 +288,7 @@ fn handle_websocket_commands(
                             crate::text_spawner::spawn_static_text(
                                 &mut commands,
                                 &number.to_string(),
+                                &"#FDE047".to_string(),
                                 fonts.text_font.clone(),
                             );
                             
