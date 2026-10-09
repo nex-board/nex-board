@@ -1,5 +1,7 @@
 # NexBoard
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/nex-board/nex-board)
+
 ## What is this?
 
 This system is developed for Kosen Festival in Osaka Metropolitan University College of Technology, by Student Association.
