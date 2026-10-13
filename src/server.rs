@@ -105,7 +105,7 @@ pub fn setup_websocket_server(app: &mut App) {
         sender: command_tx,
     });
     
-    App.insert_resource(WebSocketChannel {
+    app.insert_resource(WebSocketChannel {
         command_receiver: command_rx,
         response_sender: response_tx.clone(),
     });
