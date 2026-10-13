@@ -9,6 +9,7 @@ pub fn spawn_text(
     cmds: &mut Commands,
     text: &str,
     duration: &f32,
+    color: &str,
     text_font: TextFont,
     config: &Config,
     scrolling_speed: &mut ScrollingSpeed,
@@ -24,7 +25,7 @@ pub fn spawn_text(
         cmds.spawn((
             Text2d::new(text),
             text_font,
-            TextColor(Color::Srgba(YELLOW_300)),
+            TextColor(Color::Srgba(Srgba::hex(color).unwrap_or(YELLOW_300))),
             TextBackgroundColor(Color::Srgba(SLATE_900)),
             Transform::from_translation(Vec3::new(config.window_width / 2.0 + text_width / 2.0 + 50.0, 0.0, 0.0)),
             TextLayout::default(),
@@ -41,7 +42,7 @@ pub fn spawn_text(
         cmds.spawn((
             Text2d::new(text),
             text_font,
-            TextColor(Color::Srgba(YELLOW_300)),
+            TextColor(Color::Srgba(Srgba::hex(color).unwrap_or(YELLOW_300))),
             TextBackgroundColor(Color::Srgba(SLATE_900)),
             Transform::from_translation(Vec3::new(text_offset, 0.0, 0.0)),
             TextLayout::default(),
@@ -57,12 +58,13 @@ pub fn spawn_text(
 pub fn spawn_static_text(
     cmds: &mut Commands,
     text: &str,
+    color: &str,
     text_font: TextFont,
 ) {
     cmds.spawn((
         Text2d::new(text),
         text_font,
-        TextColor(Color::Srgba(YELLOW_300)),
+        TextColor(Color::Srgba(Srgba::hex(color).unwrap_or(YELLOW_300))),
         TextBackgroundColor(Color::Srgba(SLATE_900)),
         Transform::from_xyz(0.0, 0.0, 0.0),
         TextLayout::default(),
