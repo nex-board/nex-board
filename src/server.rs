@@ -105,7 +105,7 @@ pub fn setup_websocket_server(app: &mut App) {
         sender: command_tx,
     });
     
-    app.insert_resource(WebSocketChannel {
+    App.insert_resource(WebSocketChannel {
         command_receiver: command_rx,
         response_sender: response_tx.clone(),
     });
@@ -304,7 +304,7 @@ fn handle_websocket_commands(
                             crate::text_spawner::spawn_static_text(
                                 &mut commands,
                                 &number.to_string(),
-                                &"#FDE047".to_string(),
+                                "#FDE047",
                                 fonts.text_font.clone(),
                             );
                             
@@ -369,9 +369,9 @@ fn handle_websocket_commands(
                             commands.entity(entity).despawn();
                         }
                         if durarion == 0.0 {
-                            crate::text_spawner::spawn_static_text(&mut commands, &text, fonts.text_font.clone());
+                            crate::text_spawner::spawn_static_text(&mut commands, &text, "#FDE047", fonts.text_font.clone());
                         } else {
-                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, fonts.text_font.clone(), &config, &mut scrolling_speed);
+                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, "#FDE047", fonts.text_font.clone(), &config, &mut scrolling_speed);
                         }
                         let response = WsResponse::FreeText(FreeTextResponse { text: text });
                         let _ = ws_channel.response_sender.send(response);
