@@ -375,6 +375,7 @@ fn handle_websocket_commands(
                         }
                         let response = WsResponse::FreeText(FreeTextResponse { text: text });
                         let _ = ws_channel.response_sender.send(response);
+                        scrolling_state.is_active = true;
                     }
                 }
             }
