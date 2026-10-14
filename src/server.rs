@@ -365,6 +365,7 @@ fn handle_websocket_commands(
             WsCommand::FreeText {text, method, durarion } => {
                 match method {
                     FreeTextMethod::Show => {
+                        countdown_timer.stop();
                         for entity in text_query.iter() {
                             commands.entity(entity).despawn();
                         }
