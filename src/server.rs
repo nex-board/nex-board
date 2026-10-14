@@ -371,7 +371,7 @@ fn handle_websocket_commands(
                         if durarion == 0.0 {
                             crate::text_spawner::spawn_static_text(&mut commands, &text, "#FDE047", fonts.text_font.clone());
                         } else {
-                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, "#FDE047", fonts.text_font.clone(), &config, &mut scrolling_speed);
+                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, "#FDE047", fonts.text_font.clone(), &config, &mut *scrolling_speed);
                         }
                         let response = WsResponse::FreeText(FreeTextResponse { text: text });
                         let _ = ws_channel.response_sender.send(response);
