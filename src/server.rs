@@ -21,7 +21,7 @@ pub enum WsCommand {
     #[serde(rename = "list_presets")]
     ListPresets,
     #[serde(rename = "free_text")]
-    FreeText { method: FreeTextMethod, text: String, durarion: f32},
+    FreeText { method: FreeTextMethod, text: String, duration: f32},
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -362,17 +362,17 @@ fn handle_websocket_commands(
                 });
                 let _ = ws_channel.response_sender.send(response);
             }
-            WsCommand::FreeText {text, method, durarion } => {
+            WsCommand::FreeText {text, method, duration } => {
                 match method {
                     FreeTextMethod::Show => {
                         countdown_timer.stop();
                         for entity in text_query.iter() {
                             commands.entity(entity).despawn();
                         }
-                        if durarion == 0.0 {
+                        if duration == 0.0 {
                             crate::text_spawner::spawn_static_text(&mut commands, &text, "#FDE047", fonts.text_font.clone());
                         } else {
-                            crate::text_spawner::spawn_text(&mut commands, &text, &durarion, "#FDE047", fonts.text_font.clone(), &config, &mut *scrolling_speed);
+                            crate::text_spawner::spawn_text(&mut commands, &text, &duration, "#FDE047", fonts.text_font.clone(), &config, &mut *scrolling_speed);
                         }
                         let response = WsResponse::FreeText(FreeTextResponse { text: text });
                         let _ = ws_channel.response_sender.send(response);
