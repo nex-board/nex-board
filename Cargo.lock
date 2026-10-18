@@ -44,38 +44,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "accesskit_consumer"
-version = "0.39.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc882fa0c9c24c53649e256311b51046cf36eca9a8f7e54ff4ef682160b0cb27"
-dependencies = [
- "accesskit 0.25.0",
- "hashbrown 0.17.1",
-]
-
-[[package]]
 name = "accesskit_macos"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93fbaf15815f39084e0cb24950c232f0e3634702c2dfbf182ae3b4919a4a1d45"
 dependencies = [
  "accesskit 0.21.1",
- "accesskit_consumer 0.30.1",
+ "accesskit_consumer",
  "hashbrown 0.15.5",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
-]
-
-[[package]]
-name = "accesskit_macos"
-version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3f278988416e5fb600f24d0cfffe31a249ebbff980fb9c5a3b5fbed2c579f73"
-dependencies = [
- "accesskit 0.25.0",
- "accesskit_consumer 0.39.0",
- "hashbrown 0.17.1",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -88,7 +64,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "792991159fa9ba57459de59e12e918bb90c5346fea7d40ac1a11f8632b41e63a"
 dependencies = [
  "accesskit 0.21.1",
- "accesskit_consumer 0.30.1",
+ "accesskit_consumer",
  "hashbrown 0.15.5",
  "static_assertions",
  "windows 0.61.3",
@@ -102,7 +78,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd9db0ea66997e3f4eae4a5f2c6b6486cf206642639ee629dbbb860ace1dec87"
 dependencies = [
  "accesskit 0.21.1",
- "accesskit_macos 0.22.1",
+ "accesskit_macos",
  "accesskit_windows",
  "raw-window-handle",
  "winit",
@@ -2796,15 +2772,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hashbrown"
-version = "0.17.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
-dependencies = [
- "foldhash 0.2.0",
-]
-
-[[package]]
 name = "heapless"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3384,7 +3351,6 @@ name = "nex-board"
 version = "0.2.0"
 dependencies = [
  "accesskit 0.25.0",
- "accesskit_macos 0.27.0",
  "axum",
  "bevy",
  "bevy-tokio-tasks",
