@@ -23,8 +23,9 @@ fn main() {
         .cloned()
         .unwrap_or_else(|| vec![TextSource {
             content: "No presets available".to_string(),
-            duration: 5.0,
+            duration: 5.0, 
             color: "#FDE047".to_string(),
+            interval: None,
         }]);
     
     let mut app = App::new();
