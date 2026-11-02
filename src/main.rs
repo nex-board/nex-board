@@ -11,6 +11,7 @@ mod countdown;
 use loader::{Config, TextSource, PresetManager};
 use bingo::BingoState;
 use countdown::CountdownTimer;
+use text_spawner::AutoCueTimer;
 
 fn main() {
     let preset_manager: PresetManager = loader::unwrap_all_presets();
@@ -43,6 +44,7 @@ fn main() {
         .init_resource::<ScrollingSpeed>()
         .init_resource::<Fonts>()
         .init_resource::<BingoState>()
+        .insert_resource(AutoCueTimer::new(0.0))
         .insert_resource(CountdownTimer::new(15.0, countdown::CountdownMode::Decelerated)) // 15秒、減速モード（デフォルト）
         .add_systems(Startup, setup)
         .add_systems(Update, text_scroll)

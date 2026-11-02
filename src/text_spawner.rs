@@ -1,9 +1,29 @@
-use crate::{loader::Config, ScrollingSpeed, Showing, TextScroll, LoopingText};
+use crate::{Fonts, LoopingText, ScrollingSpeed, Showing, TextScroll, loader::Config};
 use bevy::{
     camera::visibility::NoFrustumCulling,
     color::palettes::tailwind::{SLATE_900, YELLOW_300},
+    time::{TimerMode, Timer},
     prelude::*,
 };
+
+#[derive(Component)]
+pub struct Automated;
+
+#[derive(Component)]
+pub struct JustAdded;
+
+#[derive(Resource)]
+pub struct AutoCueTimer {
+    timer: Timer,
+}
+
+impl AutoCueTimer {
+    pub fn new(time: f32) -> Self {
+        Self {
+            timer: Timer::from_seconds(time, TimerMode::Once),
+        }
+    }
+}
 
 pub fn spawn_text(
     cmds: &mut Commands,
@@ -13,7 +33,7 @@ pub fn spawn_text(
     text_font: TextFont,
     config: &Config,
     scrolling_speed: &mut ScrollingSpeed,
-) {
+) -> Entity {
     let text_offset = crate::text::calc_text_offset(text, config.text_size, config.window_width);
     println!("Offset: {}, Duration: {}", text_offset, duration);
     
@@ -35,8 +55,10 @@ pub fn spawn_text(
                 loop_speed,
             },
             Showing,
+            JustAdded,
         ))
-        .insert(NoFrustumCulling);
+            .insert(NoFrustumCulling)
+            .id()
     } else {
         // 通常の1回だけのスクロール
         cmds.spawn((
@@ -48,10 +70,10 @@ pub fn spawn_text(
             TextLayout::default(),
             TextScroll,
             Showing,
+            JustAdded,
         ))
-        .insert(NoFrustumCulling);
-        scrolling_speed.speed =
-            crate::text::calc_speed(text_offset * 2.0, duration, config.window_width);
+            .insert(NoFrustumCulling)
+            .id()
     }
 }
 
@@ -60,7 +82,7 @@ pub fn spawn_static_text(
     text: &str,
     color: &str,
     text_font: TextFont,
-) {
+) -> Entity {
     cmds.spawn((
         Text2d::new(text),
         text_font,
@@ -69,6 +91,36 @@ pub fn spawn_static_text(
         Transform::from_xyz(0.0, 0.0, 0.0),
         TextLayout::default(),
         Showing,
+        JustAdded,
     ))
-    .insert(NoFrustumCulling);
+        .insert(NoFrustumCulling)
+        .id()
+}
+
+pub fn spawn_queued_text(
+    mut cmds: &mut Commands,
+    text_queue: &mut crate::TextQueue,
+    text_query: &Query<Entity, With<Showing>>,
+    auto_cue_timer: &mut AutoCueTimer,
+    fonts: Fonts,
+    config: Config,
+) {
+    for entity in text_query.iter() {
+        cmds.entity(entity).despawn();
+    }
+
+    if let Some(text_source) = text_queue.texts.get(text_queue.current_index) {
+        if text_source.interval.unwrap_or(0.0) > 0.0 {
+            *auto_cue_timer = AutoCueTimer::new(text_source.interval.unwrap());
+        }
+        match text_source.duration {
+            0.0 => {
+                spawn_static_text(&mut cmds, &text_source.content, &text_source.color, fonts.text_font.clone());
+            },
+            _ => {
+                let speed = crate::text::calc_speed_from_text(&text_source.content, config.text_size, &text_source.duration, config.window_width);
+                spawn_text(&mut cmds, &text_source.content, &text_source.duration, &text_source.color, fonts.text_font.clone(), &config, &mut ScrollingSpeed { speed: speed });
+            }
+        }
+    }
 }
