@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use futures_util::{SinkExt, StreamExt};
 
 use crate::bingo::BingoState;
+use crate::text_spawner::spawn_queued_text;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(tag = "mode")]
@@ -253,22 +254,11 @@ fn handle_websocket_commands(
                     let text_content = text_source.content.clone();
                     let text_duration = text_source.duration;
                     let text_color = text_source.color.clone();
-
-		    if text_duration == 0.0 {
-			crate::text_spawner::spawn_static_text(&mut commands, &text_content, &text_color,fonts.text_font.clone());
-		    } else {
-                    crate::text_spawner::spawn_text(
-                        &mut commands,
-                        &text_content,
-                        &text_duration,
-                        &text_color,
-                        fonts.text_font.clone(),
-                        &config,
-                        &mut *scrolling_speed,
-                    );
-		    }
                     
                     text_queue.current_index = index as usize;
+
+                    spawn_queued_text(&mut commands, &mut text_queue, &text_query, fonts.text_font.clone(), &config, &mut scrolling_speed);
+                    
                     scrolling_state.is_active = true;
                     
                     // レスポンスを送信

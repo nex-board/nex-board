@@ -1,4 +1,5 @@
-use crate::{Fonts, LoopingText, ScrollingSpeed, Showing, TextScroll, loader::Config};
+use crate::{Fonts, LoopingText, ScrollingSpeed, ScrollingState, Showing, TextQueue, TextScroll, loader::Config};
+use accesskit::Role::DescriptionList;
 use bevy::{
     camera::visibility::NoFrustumCulling,
     color::palettes::tailwind::{SLATE_900, YELLOW_300},
@@ -11,21 +12,6 @@ pub struct Automated {
     timer: Timer,
 }
 
-#[derive(Component)]
-pub struct JustAdded;
-
-#[derive(Resource)]
-pub struct AutoCueTimer {
-    timer: Timer,
-}
-
-impl AutoCueTimer {
-    pub fn new(time: f32) -> Self {
-        Self {
-            timer: Timer::from_seconds(time, TimerMode::Once),
-        }
-    }
-}
 
 pub fn spawn_text(
     cmds: &mut Commands,
@@ -57,7 +43,6 @@ pub fn spawn_text(
                 loop_speed,
             },
             Showing,
-            JustAdded,
         ))
             .insert(NoFrustumCulling)
             .id()
@@ -72,7 +57,6 @@ pub fn spawn_text(
             TextLayout::default(),
             TextScroll,
             Showing,
-            JustAdded,
         ))
             .insert(NoFrustumCulling)
             .id()
@@ -93,7 +77,6 @@ pub fn spawn_static_text(
         Transform::from_xyz(0.0, 0.0, 0.0),
         TextLayout::default(),
         Showing,
-        JustAdded,
     ))
         .insert(NoFrustumCulling)
         .id()
@@ -103,9 +86,8 @@ pub fn spawn_queued_text(
     mut cmds: &mut Commands,
     text_queue: &mut crate::TextQueue,
     text_query: &Query<Entity, With<Showing>>,
-    auto_cue_timer: &mut AutoCueTimer,
     font: TextFont,
-    config: Config,
+    config: &Config,
     mut scrolling_speed: &mut ScrollingSpeed,
 )  {
     for entity in text_query.iter() {
@@ -113,7 +95,7 @@ pub fn spawn_queued_text(
     }
 
     if let Some(text_source) = text_queue.texts.get(text_queue.current_index) {
-        let mut added_entity: Entity;
+        let added_entity: Entity;
         
         match text_source.duration {
             0.0 => {
@@ -127,6 +109,31 @@ pub fn spawn_queued_text(
             cmds.entity(added_entity).insert(Automated {
                 timer: Timer::from_seconds(text_source.interval.unwrap(), TimerMode::Once)
             });
+        }
+    }
+}
+
+pub fn auto_cue_system (
+    mut cmds: Commands,
+    mut text_queue: ResMut<TextQueue>,
+    text_query: Query<Entity, With<Showing>>,
+    mut auto_cue_query: Query<&mut Automated>,
+    fonts: Res<Fonts>,
+    config: Res<Config>,
+    time: Res<Time>,
+    mut scrolling_speed: ResMut<ScrollingSpeed>,
+    mut scrolling_state: ResMut<ScrollingState>,
+) {
+    for mut automated in auto_cue_query.iter_mut() {
+        automated.timer.tick(time.delta());
+        println!("{}", automated.timer.elapsed_secs());
+        if automated.timer.just_finished() {
+            println!("Finish");
+            text_queue.current_index += 1;
+            spawn_queued_text(&mut cmds, &mut text_queue, &text_query, fonts.text_font.clone(), &*config, &mut *scrolling_speed);
+            if text_queue.texts[text_queue.current_index].duration > 0.0 {
+                scrolling_state.is_active = true;
+            }
         }
     }
 }
