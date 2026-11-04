@@ -1,5 +1,4 @@
 use crate::{Fonts, LoopingText, ScrollingSpeed, ScrollingState, Showing, TextQueue, TextScroll, loader::Config};
-use accesskit::Role::DescriptionList;
 use bevy::{
     camera::visibility::NoFrustumCulling,
     color::palettes::tailwind::{SLATE_900, YELLOW_300},
