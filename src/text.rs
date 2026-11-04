@@ -1,4 +1,4 @@
-fn count_ascii(s: &str) -> (usize, usize) {
+pub fn count_ascii(s: &str) -> (usize, usize) {
     s.chars().fold((0, 0), |mut acc, c| {
         if c.is_ascii() {
             acc.0 += 1;
@@ -17,4 +17,11 @@ pub fn calc_text_offset(s: &str, tsize: f32, wwidth: f32) -> f32 {
 
 pub fn calc_speed(w: f32, d: &f32, wwidth: f32) -> f32 {
     return (w + wwidth) / d;
+}
+
+pub fn calc_speed_from_text(s: &str, tsize: f32, d: &f32, wwidth: f32) -> f32 {
+    let (ascii, non_ascii) = count_ascii(s);
+    let text_width = (non_ascii as f32 * tsize) + (ascii as f32 * tsize * 0.5);
+    let speed = calc_speed(text_width, d, wwidth);
+    return speed;
 }

@@ -8,6 +8,7 @@ pub struct TextSource {
     pub content: String,
     pub duration: f32,
     pub color: String,
+    pub interval: Option<f32>,
 }
 
 #[derive(Deserialize, Debug, Resource, Default)]
@@ -81,11 +82,13 @@ pub fn load_all_presets() -> Result<HashMap<String, Vec<TextSource>>, Box<dyn Er
                 content: "Default Demo Text 1".to_string(),
                 duration: 5.0,
                 color: "#FDE047".to_string(),
+                interval: None,
             },
             TextSource {
                 content: "Default Demo Text 2".to_string(),
                 duration: 5.0,
                 color: "#FDE047".to_string(),
+                interval: None,
             },
         ]);
     }
@@ -110,7 +113,8 @@ pub fn unwrap_csv(f: &str) -> Vec<TextSource> {
             return vec![TextSource {
                 content: "This is a Demo Text".to_string(),
                 duration: 5.0,
-                color: "#713F12".to_string()
+                color: "#713F12".to_string(),
+                interval: None,
             }];
         }
     };
@@ -127,6 +131,7 @@ pub fn unwrap_all_presets() -> PresetManager {
                     content: "This is a Demo Text".to_string(),
                     duration: 5.0,
                     color: "#713F12".to_string(),
+                    interval: None,
                 }
             ]);
             PresetManager { presets: default_presets }
