@@ -40,7 +40,7 @@
             glfw
             lldb
             pkg-config
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
+          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux linux-deps;
         };
 
         packages.default = pkgs.buildFHSEnv {
@@ -49,7 +49,7 @@
             (self.packages.${system}.nex-board-unwrapped)
             pkgs.glfw
             pkgs.pkg-config
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
+          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux linux-deps;
           runScript = "nex-board";
         };
 
@@ -61,7 +61,7 @@
           }).buildRustPackage
             {
               pname = "nex-board";
-              version = "0.2.0";
+              version = "0.3.0";
               src = ./.;
               rpath = true;
               cargoLock.lockFile = ./Cargo.lock;
@@ -72,12 +72,12 @@
               ];
               propagatedBuildInputs = with pkgs; [
                 openssl
-              ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps;
+              ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux linux-deps;
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath ([
                 pkgs.libclang
                 pkgs.pkg-config
-              ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux linux-deps);
-              postFixup = (if pkgs.stdenv.isLinux then ''
+              ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux linux-deps);
+              postFixup = (if pkgs.stdenv.hostPlatform.isLinux then ''
                 lib_path="${
                   pkgs.lib.makeLibraryPath [
                     pkgs.wayland
