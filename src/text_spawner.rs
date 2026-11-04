@@ -7,7 +7,9 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub struct Automated;
+pub struct Automated {
+    timer: Timer,
+}
 
 #[derive(Component)]
 pub struct JustAdded;
@@ -60,7 +62,7 @@ pub fn spawn_text(
             .insert(NoFrustumCulling)
             .id()
     } else {
-        // 通常の1回だけのスクロール
+        scrolling_speed.speed = crate::text::calc_speed_from_text(text, config.text_size, duration, config.window_width);
         cmds.spawn((
             Text2d::new(text),
             text_font,
@@ -102,25 +104,29 @@ pub fn spawn_queued_text(
     text_queue: &mut crate::TextQueue,
     text_query: &Query<Entity, With<Showing>>,
     auto_cue_timer: &mut AutoCueTimer,
-    fonts: Fonts,
+    font: TextFont,
     config: Config,
-) {
+    mut scrolling_speed: &mut ScrollingSpeed,
+)  {
     for entity in text_query.iter() {
         cmds.entity(entity).despawn();
     }
 
     if let Some(text_source) = text_queue.texts.get(text_queue.current_index) {
-        if text_source.interval.unwrap_or(0.0) > 0.0 {
-            *auto_cue_timer = AutoCueTimer::new(text_source.interval.unwrap());
-        }
+        let mut added_entity: Entity;
+        
         match text_source.duration {
             0.0 => {
-                spawn_static_text(&mut cmds, &text_source.content, &text_source.color, fonts.text_font.clone());
+                added_entity = spawn_static_text(&mut cmds, &text_source.content, &text_source.color, font);
             },
             _ => {
-                let speed = crate::text::calc_speed_from_text(&text_source.content, config.text_size, &text_source.duration, config.window_width);
-                spawn_text(&mut cmds, &text_source.content, &text_source.duration, &text_source.color, fonts.text_font.clone(), &config, &mut ScrollingSpeed { speed: speed });
+                added_entity = spawn_text(&mut cmds, &text_source.content, &text_source.duration, &text_source.color, font, &config, &mut scrolling_speed);
             }
+        }
+        if text_source.interval.unwrap_or(0.0) > 0.0 {
+            cmds.entity(added_entity).insert(Automated {
+                timer: Timer::from_seconds(text_source.interval.unwrap(), TimerMode::Once)
+            });
         }
     }
 }
