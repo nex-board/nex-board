@@ -23,8 +23,9 @@ fn main() {
         .cloned()
         .unwrap_or_else(|| vec![TextSource {
             content: "No presets available".to_string(),
-            duration: 5.0,
+            duration: 5.0, 
             color: "#FDE047".to_string(),
+            interval: None,
         }]);
     
     let mut app = App::new();
@@ -48,6 +49,7 @@ fn main() {
         .add_systems(Update, text_loop)
         .add_systems(Update, check_text_completion)
         .add_systems(Update, handle_keyboard_action)
+        .add_systems(Update, text_spawner::auto_cue_system)
         .add_systems(Update, countdown::countdown_system)
         .add_systems(Update, countdown::fade_system)
         .add_systems(Update, countdown::countdown_finished_system);
@@ -252,9 +254,7 @@ fn check_text_completion(
             transform.translation.x + (text_width + config.window_width) / 2.0 + 5.0;
 
         // テキストが完全に画面左端を通り過ぎたかチェック（テキスト全体が画面外に出るまで待つ）
-        if text_left_edge < 0.0 {
-            // 現在のテキストエンティティを削除
-            cmds.entity(entity).despawn();
+        if text_left_edge < 0.0  && scrolling_state.is_active {
 
             // スクロールを停止
             scrolling_state.is_active = false;

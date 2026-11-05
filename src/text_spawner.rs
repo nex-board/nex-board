@@ -1,9 +1,17 @@
-use crate::{loader::Config, ScrollingSpeed, Showing, TextScroll, LoopingText};
+use crate::{Fonts, LoopingText, ScrollingSpeed, ScrollingState, Showing, TextQueue, TextScroll, loader::Config, server::{BulletinResponse, WebSocketChannel, WsResponse}};
+use axum::http::response;
 use bevy::{
     camera::visibility::NoFrustumCulling,
     color::palettes::tailwind::{SLATE_900, YELLOW_300},
+    time::{TimerMode, Timer},
     prelude::*,
 };
+
+#[derive(Component)]
+pub struct Automated {
+    timer: Timer,
+}
+
 
 pub fn spawn_text(
     cmds: &mut Commands,
@@ -13,7 +21,7 @@ pub fn spawn_text(
     text_font: TextFont,
     config: &Config,
     scrolling_speed: &mut ScrollingSpeed,
-) {
+) -> Entity {
     let text_offset = crate::text::calc_text_offset(text, config.text_size, config.window_width);
     println!("Offset: {}, Duration: {}", text_offset, duration);
     
@@ -36,9 +44,10 @@ pub fn spawn_text(
             },
             Showing,
         ))
-        .insert(NoFrustumCulling);
+            .insert(NoFrustumCulling)
+            .id()
     } else {
-        // 通常の1回だけのスクロール
+        scrolling_speed.speed = crate::text::calc_speed_from_text(text, config.text_size, duration, config.window_width);
         cmds.spawn((
             Text2d::new(text),
             text_font,
@@ -49,9 +58,8 @@ pub fn spawn_text(
             TextScroll,
             Showing,
         ))
-        .insert(NoFrustumCulling);
-        scrolling_speed.speed =
-            crate::text::calc_speed(text_offset * 2.0, duration, config.window_width);
+            .insert(NoFrustumCulling)
+            .id()
     }
 }
 
@@ -60,7 +68,7 @@ pub fn spawn_static_text(
     text: &str,
     color: &str,
     text_font: TextFont,
-) {
+) -> Entity {
     cmds.spawn((
         Text2d::new(text),
         text_font,
@@ -70,5 +78,75 @@ pub fn spawn_static_text(
         TextLayout::default(),
         Showing,
     ))
-    .insert(NoFrustumCulling);
+        .insert(NoFrustumCulling)
+        .id()
+}
+
+pub fn spawn_queued_text(
+    mut cmds: &mut Commands,
+    text_queue: &mut crate::TextQueue,
+    text_query: &Query<Entity, With<Showing>>,
+    font: TextFont,
+    config: &Config,
+    mut scrolling_speed: &mut ScrollingSpeed,
+)  {
+    for entity in text_query.iter() {
+        cmds.entity(entity).despawn();
+    }
+
+    if let Some(text_source) = text_queue.texts.get(text_queue.current_index) {
+        let added_entity: Entity;
+        
+        match text_source.duration {
+            0.0 => {
+                added_entity = spawn_static_text(&mut cmds, &text_source.content, &text_source.color, font);
+            },
+            _ => {
+                added_entity = spawn_text(&mut cmds, &text_source.content, &text_source.duration, &text_source.color, font, &config, &mut scrolling_speed);
+            }
+        }
+        if text_source.interval.unwrap_or(0.0) > 0.0 {
+            cmds.entity(added_entity).insert(Automated {
+                timer: Timer::from_seconds(text_source.interval.unwrap(), TimerMode::Once)
+            });
+        }
+    }
+}
+
+pub fn auto_cue_system (
+    mut cmds: Commands,
+    mut text_queue: ResMut<TextQueue>,
+    text_query: Query<Entity, With<Showing>>,
+    mut auto_cue_query: Query<&mut Automated>,
+    fonts: Res<Fonts>,
+    config: Res<Config>,
+    time: Res<Time>,
+    mut scrolling_speed: ResMut<ScrollingSpeed>,
+    mut scrolling_state: ResMut<ScrollingState>,
+    ws_channel: ResMut<WebSocketChannel>,
+) {
+    for mut automated in auto_cue_query.iter_mut() {
+        automated.timer.tick(time.delta());
+        println!("{}", automated.timer.elapsed_secs());
+        if automated.timer.just_finished() {
+            println!("Finish");
+            text_queue.current_index += 1;
+            spawn_queued_text(&mut cmds, &mut text_queue, &text_query, fonts.text_font.clone(), &*config, &mut *scrolling_speed);
+            if text_queue.texts[text_queue.current_index].duration > 0.0 {
+                scrolling_state.is_active = true;
+            }
+
+            let prev_text = text_queue.texts.get(text_queue.current_index.saturating_sub(1) as usize).map(|t| t.content.clone()).unwrap_or_default();
+            let now_text = text_queue.texts.get(text_queue.current_index).map(|t| t.content.clone()).unwrap_or_default();
+            let next_text = text_queue.texts.get(text_queue.current_index + 1 as usize).map(|t| t.content.clone()).unwrap_or_default();
+
+            let response = WsResponse::Bulletin(BulletinResponse {
+                prev_text,
+                now_text,
+                next_text
+            });
+
+            let _ = ws_channel.response_sender.send(response);
+        }
+    }
 }
