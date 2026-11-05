@@ -29,8 +29,14 @@ fn main() {
         }]);
     
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins)
-        .add_plugins(TokioTasksPlugin::default())
+    app.add_plugins(TokioTasksPlugin::default())
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                decorations: false,
+                ..default()
+            }),
+            ..default()
+        }))
         .insert_resource(ClearColor(Color::Srgba(SLATE_900)))
         .insert_resource(preset_manager)
         .insert_resource(TextQueue {
