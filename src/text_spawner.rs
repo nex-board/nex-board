@@ -1,4 +1,5 @@
-use crate::{Fonts, LoopingText, ScrollingSpeed, ScrollingState, Showing, TextQueue, TextScroll, loader::Config};
+use crate::{Fonts, LoopingText, ScrollingSpeed, ScrollingState, Showing, TextQueue, TextScroll, loader::Config, server::{BulletinResponse, WebSocketChannel, WsResponse}};
+use axum::http::response;
 use bevy::{
     camera::visibility::NoFrustumCulling,
     color::palettes::tailwind::{SLATE_900, YELLOW_300},
@@ -122,6 +123,7 @@ pub fn auto_cue_system (
     time: Res<Time>,
     mut scrolling_speed: ResMut<ScrollingSpeed>,
     mut scrolling_state: ResMut<ScrollingState>,
+    ws_channel: ResMut<WebSocketChannel>,
 ) {
     for mut automated in auto_cue_query.iter_mut() {
         automated.timer.tick(time.delta());
@@ -133,6 +135,18 @@ pub fn auto_cue_system (
             if text_queue.texts[text_queue.current_index].duration > 0.0 {
                 scrolling_state.is_active = true;
             }
+
+            let prev_text = text_queue.texts.get(text_queue.current_index.saturating_sub(1) as usize).map(|t| t.content.clone()).unwrap_or_default();
+            let now_text = text_queue.texts.get(text_queue.current_index).map(|t| t.content.clone()).unwrap_or_default();
+            let next_text = text_queue.texts.get(text_queue.current_index + 1 as usize).map(|t| t.content.clone()).unwrap_or_default();
+
+            let response = WsResponse::Bulletin(BulletinResponse {
+                prev_text,
+                now_text,
+                next_text
+            });
+
+            let _ = ws_channel.response_sender.send(response);
         }
     }
 }
