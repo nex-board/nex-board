@@ -59,6 +59,7 @@ pub struct BulletinResponse {
     pub prev_text: String,
     pub now_text: String,
     pub next_text: String,
+    pub index: u8,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -274,6 +275,7 @@ fn handle_websocket_commands(
                         prev_text,
                         now_text,
                         next_text,
+                        index: index as u8,
                     });
                     
                     let _ = ws_channel.response_sender.send(response);

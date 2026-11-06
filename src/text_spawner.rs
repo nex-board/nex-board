@@ -143,7 +143,8 @@ pub fn auto_cue_system (
             let response = WsResponse::Bulletin(BulletinResponse {
                 prev_text,
                 now_text,
-                next_text
+                next_text,
+                index: text_queue.current_index as u8,
             });
 
             let _ = ws_channel.response_sender.send(response);
